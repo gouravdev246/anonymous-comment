@@ -11,7 +11,7 @@ const Index: React.FC = () => {
         <CommentSection />
       </main>
       <div className="fixed bottom-4 right-4 text-xs text-anonymous-text/50">
-        Comments sync automatically between browsers
+        Comments sync in real-time using Supabase
       </div>
     </div>
   );
