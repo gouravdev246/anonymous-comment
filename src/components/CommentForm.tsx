@@ -1,10 +1,10 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Send, X } from 'lucide-react';
 import { CommentFormProps } from '@/utils/types';
+import { generateUsername } from '@/utils/usernameGenerator';
 
 const CommentForm: React.FC<CommentFormProps> = ({ 
   onSubmit, 
@@ -14,6 +14,12 @@ const CommentForm: React.FC<CommentFormProps> = ({
   const [text, setText] = useState('');
   const [username, setUsername] = useState('');
   const [error, setError] = useState('');
+  const [defaultUsername, setDefaultUsername] = useState('');
+
+  useEffect(() => {
+    // Generate and set the default username when component mounts
+    setDefaultUsername(generateUsername());
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -23,9 +29,8 @@ const CommentForm: React.FC<CommentFormProps> = ({
       return;
     }
     
-    onSubmit(text, username || 'Anonymous');
+    onSubmit(text, username || defaultUsername);
     setText('');
-    setUsername('');
     setError('');
   };
 
@@ -48,7 +53,7 @@ const CommentForm: React.FC<CommentFormProps> = ({
         
         <div>
           <Input
-            placeholder="Username (optional)"
+            placeholder={`Custom username (default: ${defaultUsername})`}
             value={username}
             onChange={(e) => setUsername(e.target.value)}
             className="mb-4"
