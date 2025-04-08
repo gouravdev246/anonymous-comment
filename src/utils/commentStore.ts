@@ -26,13 +26,19 @@ const initialComments: CommentType[] = [
 // In-memory comment store (would be replaced by API calls in production)
 class CommentStore {
   private comments: CommentType[];
+  private lastModified: number;
 
   constructor() {
     this.comments = [...initialComments];
+    this.lastModified = Date.now();
   }
 
   getAllComments(): CommentType[] {
     return [...this.comments];
+  }
+
+  getLastModifiedTime(): number {
+    return this.lastModified;
   }
 
   addComment(text: string, username: string): CommentType {
@@ -46,6 +52,7 @@ class CommentStore {
     };
 
     this.comments.unshift(newComment);
+    this.lastModified = Date.now();
     return newComment;
   }
 
@@ -62,6 +69,7 @@ class CommentStore {
             isReported: false
           };
           comments[i].replies.push(newReply);
+          this.lastModified = Date.now();
           return true;
         }
         
@@ -81,6 +89,7 @@ class CommentStore {
       for (let i = 0; i < comments.length; i++) {
         if (comments[i].id === commentId) {
           comments[i].isReported = true;
+          this.lastModified = Date.now();
           return true;
         }
         

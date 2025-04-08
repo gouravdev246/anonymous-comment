@@ -10,15 +10,29 @@ const CommentSection: React.FC = () => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
   const { toast } = useToast();
+  
+  // Function to fetch the latest comments
+  const fetchLatestComments = () => {
+    const latestComments = commentStore.getAllComments();
+    setComments(latestComments);
+  };
 
   useEffect(() => {
-    // Load comments (in a real app, this would be an API call)
-    setComments(commentStore.getAllComments());
+    // Initial load of comments
+    fetchLatestComments();
+    
+    // Set up polling every 3 seconds to check for new comments
+    const pollingInterval = setInterval(() => {
+      fetchLatestComments();
+    }, 3000);
+    
+    // Clean up interval on component unmount
+    return () => clearInterval(pollingInterval);
   }, []);
 
   const handleAddComment = (text: string, username: string) => {
     const newComment = commentStore.addComment(text, username);
-    setComments([newComment, ...comments]);
+    fetchLatestComments(); // Fetch all comments to ensure we have the latest state
     
     toast({
       title: "Comment posted!",
@@ -30,7 +44,7 @@ const CommentSection: React.FC = () => {
     const success = commentStore.addReply(parentId, text, username);
     
     if (success) {
-      setComments(commentStore.getAllComments());
+      fetchLatestComments(); // Fetch all comments to ensure we have the latest state
       setActiveReplyId(null);
       
       toast({
@@ -44,7 +58,7 @@ const CommentSection: React.FC = () => {
     const success = commentStore.reportComment(commentId);
     
     if (success) {
-      setComments(commentStore.getAllComments());
+      fetchLatestComments(); // Fetch all comments to ensure we have the latest state
       
       toast({
         title: "Comment reported",
