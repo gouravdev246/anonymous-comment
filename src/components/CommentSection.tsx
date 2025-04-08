@@ -1,5 +1,5 @@
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { CommentType } from '@/utils/types';
 import CommentForm from './CommentForm';
 import Comment from './Comment';
@@ -9,25 +9,43 @@ import { useToast } from '@/components/ui/use-toast';
 const CommentSection: React.FC = () => {
   const [comments, setComments] = useState<CommentType[]>([]);
   const [activeReplyId, setActiveReplyId] = useState<string | null>(null);
+  const lastModifiedRef = useRef<number>(0);
   const { toast } = useToast();
   
   // Function to fetch the latest comments
   const fetchLatestComments = () => {
-    const latestComments = commentStore.getAllComments();
-    setComments(latestComments);
+    const currentLastModified = commentStore.getLastModifiedTime();
+    
+    // Only update the state if the comments have changed
+    if (currentLastModified > lastModifiedRef.current) {
+      const latestComments = commentStore.getAllComments();
+      setComments(latestComments);
+      lastModifiedRef.current = currentLastModified;
+    }
   };
 
   useEffect(() => {
     // Initial load of comments
     fetchLatestComments();
     
-    // Set up polling every 3 seconds to check for new comments
+    // Set up polling every 1.5 seconds to check for new comments
+    // Using a shorter interval to ensure better real-time experience
     const pollingInterval = setInterval(() => {
       fetchLatestComments();
-    }, 3000);
+    }, 1500);
     
-    // Clean up interval on component unmount
-    return () => clearInterval(pollingInterval);
+    // Add a storage event listener to detect changes from other browser windows
+    const handleStorageChange = () => {
+      fetchLatestComments();
+    };
+    
+    window.addEventListener('storage', handleStorageChange);
+    
+    // Clean up interval and event listener on component unmount
+    return () => {
+      clearInterval(pollingInterval);
+      window.removeEventListener('storage', handleStorageChange);
+    };
   }, []);
 
   const handleAddComment = (text: string, username: string) => {

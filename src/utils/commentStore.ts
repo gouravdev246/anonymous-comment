@@ -2,6 +2,9 @@
 import { CommentType } from './types';
 import { v4 as uuidv4 } from 'uuid';
 
+// Local storage key
+const COMMENTS_STORAGE_KEY = 'anonymous-comments';
+
 // Initial seed data
 const initialComments: CommentType[] = [
   {
@@ -23,14 +26,61 @@ const initialComments: CommentType[] = [
   }
 ];
 
-// In-memory comment store (would be replaced by API calls in production)
+// Helper function to safely parse JSON from localStorage
+const safeJsonParse = <T>(json: string | null, fallback: T): T => {
+  if (!json) return fallback;
+  try {
+    return JSON.parse(json);
+  } catch (e) {
+    console.error('Failed to parse stored comments:', e);
+    return fallback;
+  }
+};
+
+// Helper to convert date strings back to Date objects when loading from localStorage
+const restoreDates = (comments: CommentType[]): CommentType[] => {
+  const processComment = (comment: CommentType): CommentType => {
+    return {
+      ...comment,
+      timestamp: new Date(comment.timestamp),
+      replies: comment.replies.map(processComment)
+    };
+  };
+  
+  return comments.map(processComment);
+};
+
+// In-memory comment store with localStorage persistence
 class CommentStore {
   private comments: CommentType[];
   private lastModified: number;
 
   constructor() {
-    this.comments = [...initialComments];
-    this.lastModified = Date.now();
+    // Try to load comments from localStorage first, fall back to initial data if not available
+    const storedCommentsJson = localStorage.getItem(COMMENTS_STORAGE_KEY);
+    const storedData = safeJsonParse<{comments: CommentType[], lastModified: number}>(
+      storedCommentsJson, 
+      { comments: initialComments, lastModified: Date.now() }
+    );
+    
+    this.comments = restoreDates(storedData.comments);
+    this.lastModified = storedData.lastModified;
+    
+    // Save initial state if nothing was stored before
+    if (!storedCommentsJson) {
+      this.saveToLocalStorage();
+    }
+  }
+
+  private saveToLocalStorage(): void {
+    try {
+      localStorage.setItem(COMMENTS_STORAGE_KEY, JSON.stringify({
+        comments: this.comments,
+        lastModified: this.lastModified
+      }));
+    } catch (e) {
+      console.error('Failed to save comments to localStorage:', e);
+    }
   }
 
   getAllComments(): CommentType[] {
@@ -53,6 +103,7 @@ class CommentStore {
 
     this.comments.unshift(newComment);
     this.lastModified = Date.now();
+    this.saveToLocalStorage();
     return newComment;
   }
 
@@ -70,6 +121,7 @@ class CommentStore {
           };
           comments[i].replies.push(newReply);
           this.lastModified = Date.now();
+          this.saveToLocalStorage();
           return true;
         }
         
@@ -90,6 +142,7 @@ class CommentStore {
         if (comments[i].id === commentId) {
           comments[i].isReported = true;
           this.lastModified = Date.now();
+          this.saveToLocalStorage();
           return true;
         }
         
