@@ -1,4 +1,3 @@
-
 export interface CommentType {
   id: string;
   text: string;
@@ -19,6 +18,7 @@ export interface CommentProps {
   comment: CommentType;
   onReply: (parentId: string) => void;
   onReport: (commentId: string) => void;
+  onDelete: (commentId: string) => void;
   activeReplyId: string | null;
   onSubmitReply: (text: string, username: string, parentId: string) => void;
   onCancelReply: () => void;

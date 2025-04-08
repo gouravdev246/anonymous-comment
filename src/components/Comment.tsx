@@ -1,7 +1,6 @@
-
 import React from 'react';
 import { CommentProps } from '@/utils/types';
-import { MessageSquare, Flag } from 'lucide-react';
+import { MessageSquare, Flag, Trash2 } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import CommentForm from './CommentForm';
@@ -10,6 +9,7 @@ const Comment: React.FC<CommentProps> = ({
   comment,
   onReply,
   onReport,
+  onDelete,
   activeReplyId,
   onSubmitReply,
   onCancelReply
@@ -31,7 +31,7 @@ const Comment: React.FC<CommentProps> = ({
 
       <div className="mt-2 whitespace-pre-wrap break-words">{comment.text}</div>
 
-      <div className="mt-4 flex items-center space-x-4">
+      <div className="flex items-center gap-2 mt-4">
         <Button 
           variant="ghost" 
           size="sm" 
@@ -57,6 +57,16 @@ const Comment: React.FC<CommentProps> = ({
             Reported
           </Badge>
         )}
+
+        <Button 
+          variant="ghost" 
+          size="sm" 
+          className="text-xs text-red-400 hover:text-red-500 hover:bg-red-500/10"
+          onClick={() => onDelete(comment.id)}
+        >
+          <Trash2 className="h-3.5 w-3.5 mr-1" />
+          Delete
+        </Button>
       </div>
 
       {isReplyActive && (
@@ -75,6 +85,7 @@ const Comment: React.FC<CommentProps> = ({
               comment={reply}
               onReply={onReply}
               onReport={onReport}
+              onDelete={onDelete}
               activeReplyId={activeReplyId}
               onSubmitReply={onSubmitReply}
               onCancelReply={onCancelReply}

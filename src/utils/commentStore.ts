@@ -1,4 +1,3 @@
-
 import { CommentType } from './types';
 import { v4 as uuidv4 } from 'uuid';
 import { supabase } from '@/integrations/supabase/client';
@@ -152,6 +151,27 @@ class CommentStore {
       return true;
     } catch (error) {
       console.error('Error in reportComment:', error);
+      return false;
+    }
+  }
+
+  async deleteComment(commentId: string): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('comments')
+        .delete()
+        .eq('id', commentId);
+      
+      if (error) {
+        console.error('Error deleting comment:', error);
+        return false;
+      }
+      
+      // Update last modified time
+      lastModified = Date.now();
+      return true;
+    } catch (error) {
+      console.error('Error in deleteComment:', error);
       return false;
     }
   }

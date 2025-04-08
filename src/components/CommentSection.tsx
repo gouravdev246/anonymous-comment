@@ -1,4 +1,3 @@
-
 import React, { useState, useEffect, useRef } from 'react';
 import { CommentType } from '@/utils/types';
 import CommentForm from './CommentForm';
@@ -110,6 +109,23 @@ const CommentSection: React.FC = () => {
     }
   };
 
+  const handleDelete = async (commentId: string) => {
+    const success = await commentStore.deleteComment(commentId);
+    
+    if (success) {
+      toast({
+        title: "Comment deleted",
+        description: "The comment has been successfully deleted.",
+      });
+    } else {
+      toast({
+        title: "Error deleting comment",
+        description: "Could not delete the comment. Please try again.",
+        variant: "destructive",
+      });
+    }
+  };
+
   return (
     <div className="container px-4 mx-auto max-w-3xl">
       <CommentForm onSubmit={handleAddComment} />
@@ -127,6 +143,7 @@ const CommentSection: React.FC = () => {
                 comment={comment}
                 onReply={setActiveReplyId}
                 onReport={handleReport}
+                onDelete={handleDelete}
                 activeReplyId={activeReplyId}
                 onSubmitReply={handleAddReply}
                 onCancelReply={() => setActiveReplyId(null)}
