@@ -5,6 +5,7 @@ export interface CommentType {
   username: string;
   replies: CommentType[];
   isReported: boolean;
+  imageUrl?: string;
 }
 
 export interface CommentFormProps {
@@ -16,7 +17,7 @@ export interface CommentFormProps {
 
 export interface CommentProps {
   comment: CommentType;
-  onReply: (parentId: string) => void;
+  onReply: (commentId: string) => void;
   onReport: (commentId: string) => void;
   onDelete: (commentId: string) => void;
   activeReplyId: string | null;

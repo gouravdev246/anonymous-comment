@@ -30,6 +30,18 @@ const Comment: React.FC<CommentProps> = ({
       </div>
 
       <div className="mt-2 whitespace-pre-wrap break-words">{comment.text}</div>
+      
+      {comment.imageUrl && (
+        <div className="mt-3">
+          <img 
+            src={comment.imageUrl} 
+            alt="Attached image" 
+            className="rounded-lg max-h-80 max-w-full object-contain border border-anonymous-accent/20"
+            onClick={() => window.open(comment.imageUrl, '_blank')}
+            style={{ cursor: 'pointer' }}
+          />
+        </div>
+      )}
 
       <div className="flex items-center gap-2 mt-4">
         <Button 
@@ -71,7 +83,7 @@ const Comment: React.FC<CommentProps> = ({
 
       {isReplyActive && (
         <CommentForm 
-          onSubmit={(text, username) => onSubmitReply(text, username, comment.id)}
+          onSubmit={(text, username, imageUrl) => onSubmitReply(text, username, comment.id, imageUrl)}
           isReply={true}
           onCancel={onCancelReply}
         />

@@ -14,7 +14,8 @@ const convertRowToComment = (row: any): CommentType => {
     timestamp: new Date(row.created_at),
     username: row.username || 'Anonymous',
     replies: [],
-    isReported: row.is_reported
+    isReported: row.is_reported,
+    imageUrl: row.image_url || null
   };
 };
 
@@ -74,7 +75,7 @@ class CommentStore {
     return lastModified;
   }
 
-  async addComment(text: string, username: string): Promise<CommentType | null> {
+  async addComment(text: string, username: string, imageUrl?: string): Promise<CommentType | null> {
     try {
       const id = uuidv4();
       const { data, error } = await supabase
@@ -85,7 +86,8 @@ class CommentStore {
             text, 
             username: username || 'Anonymous',
             parent_id: null,
-            is_reported: false
+            is_reported: false,
+            image_url: imageUrl || null
           }
         ])
         .select()
@@ -105,7 +107,7 @@ class CommentStore {
     }
   }
 
-  async addReply(parentId: string, text: string, username: string): Promise<boolean> {
+  async addReply(parentId: string, text: string, username: string, imageUrl?: string): Promise<boolean> {
     try {
       const id = uuidv4();
       const { error } = await supabase
@@ -116,7 +118,8 @@ class CommentStore {
             text,
             username: username || 'Anonymous',
             parent_id: parentId,
-            is_reported: false
+            is_reported: false,
+            image_url: imageUrl || null
           }
         ]);
       
@@ -157,15 +160,53 @@ class CommentStore {
 
   async deleteComment(commentId: string): Promise<boolean> {
     try {
-      const { error } = await supabase
-        .from('comments')
-        .delete()
-        .eq('id', commentId);
+      console.log('Attempting to delete comment:', commentId);
       
-      if (error) {
-        console.error('Error deleting comment:', error);
+      // Get all comments to find what needs to be deleted
+      const { data: allComments, error: fetchError } = await supabase
+        .from('comments')
+        .select('*');
+      
+      if (fetchError) {
+        console.error('Error fetching comments:', fetchError);
         return false;
       }
+      
+      // Find all comments to delete (the specified comment and all its descendants)
+      const commentsToDelete: string[] = [];
+      
+      // Function to recursively collect IDs of comments to delete
+      const collectCommentIds = (parentId: string) => {
+        commentsToDelete.push(parentId);
+        
+        // Find all direct children
+        const childComments = allComments?.filter(c => c.parent_id === parentId) || [];
+        
+        // Recursively collect descendant IDs
+        for (const child of childComments) {
+          collectCommentIds(child.id);
+        }
+      };
+      
+      // Start collecting from the target comment
+      collectCommentIds(commentId);
+      
+      console.log('Comments to delete:', commentsToDelete);
+      
+      // Delete all collected comments in a single operation
+      if (commentsToDelete.length > 0) {
+        const { error: deleteError } = await supabase
+          .from('comments')
+          .delete()
+          .in('id', commentsToDelete);
+        
+        if (deleteError) {
+          console.error('Error deleting comments:', deleteError);
+          return false;
+        }
+      }
+      
+      console.log('Comments deleted successfully:', commentsToDelete.length);
       
       // Update last modified time
       lastModified = Date.now();
@@ -173,6 +214,73 @@ class CommentStore {
     } catch (error) {
       console.error('Error in deleteComment:', error);
       return false;
+    }
+  }
+
+  // Add a new method to upload an image to Supabase storage
+  async uploadImage(file: File): Promise<string | null> {
+    try {
+      // Check if file is valid
+      if (!file || file.size === 0) {
+        console.error('Invalid file provided for upload');
+        return null;
+      }
+      
+      const fileExt = file.name.split('.').pop();
+      const fileName = `${uuidv4()}.${fileExt}`;
+      const filePath = `comment-images/${fileName}`;
+      
+      console.log('Attempting to upload file:', {
+        fileName,
+        filePath,
+        fileSize: file.size,
+        fileType: file.type
+      });
+      
+      // Try to get the bucket info first to verify it exists
+      const { data: bucketData, error: bucketError } = await supabase.storage
+        .getBucket('public');
+        
+      if (bucketError) {
+        console.error('Bucket access error:', bucketError);
+        // Try to create the bucket if it doesn't exist
+        const { error: createBucketError } = await supabase.storage
+          .createBucket('public', {
+            public: true
+          });
+          
+        if (createBucketError) {
+          console.error('Error creating bucket:', createBucketError);
+          return null;
+        }
+      }
+      
+      // Upload the file
+      const { data: uploadData, error: uploadError } = await supabase.storage
+        .from('public')
+        .upload(filePath, file, {
+          cacheControl: '3600',
+          upsert: true
+        });
+      
+      if (uploadError) {
+        console.error('Error uploading image:', uploadError);
+        return null;
+      }
+      
+      console.log('Upload successful, path:', uploadData?.path);
+      
+      // Get the public URL for the uploaded image
+      const { data } = supabase.storage
+        .from('public')
+        .getPublicUrl(filePath);
+      
+      console.log('Generated public URL:', data.publicUrl);
+      
+      return data.publicUrl;
+    } catch (error) {
+      console.error('Error in uploadImage:', error);
+      return null;
     }
   }
 }
